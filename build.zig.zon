@@ -1,0 +1,15 @@
+.{
+    .name = "dz",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"zig-cli" = .{
+            .url = "git+https://github.com/sam701/zig-cli?ref=last-zig-0.13#9a94c4803a52e54c26b198096d63fb5bde752da2",
+            .hash = "1220ab73fb7cc11b2308edc3364988e05efcddbcac31b707f55e6216d1b9c0da13f1",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
