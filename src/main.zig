@@ -21,20 +21,24 @@ pub fn main() !void {
     var verbose = false;
     var filename: ?[]const u8 = null;
 
-    const help = "dotr " ++ version.Version ++
-        \\
-        \\
-        \\USAGE:
-        \\  dotr [OPTIONS] [FILENAME]
-        \\
-        \\OPTIONS
-        \\  --reverse|-r    Reverse the commands (Link → Unlink, Encrypt → Decrypt).
-        \\  --verbose|-v    Verbose mode.
-    ;
-
     const cb = struct {
         fn showHelp() void {
+            const help =
+                \\usage: dotr [flags] [filename]
+                \\
+                \\The default filename is `dotfile`
+                \\
+                \\flags:
+                \\  -r, --reverse        Reverse the commands (Link → Unlink, Encrypt → Decrypt)
+                \\  -v, --verbose        Verbose mode
+                \\  --version            Show version information
+                \\  -h, --help           Show this help message
+            ;
             log.info("{s}", .{help});
+            std.process.exit(0);
+        }
+        fn showVersion() void {
+            log.info("{s}", .{version.FullDescription});
             std.process.exit(0);
         }
     };
@@ -52,6 +56,8 @@ pub fn main() !void {
                     reverse = true;
                 } else if (flag.isLong("help") or flag.isShort("h")) {
                     cb.showHelp();
+                } else if (flag.isLong("version")) {
+                    cb.showVersion();
                 }
             },
             .arg => |val| {
