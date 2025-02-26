@@ -9,11 +9,11 @@ const Dependency = struct {
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const name = "dz";
+    const name = "dotr";
 
     const deps = &[_]Dependency{
-        .{ .name = "zig-cli" },
-        .{ .name = "jdz_allocator" },
+        .{ .name = "age" },
+        .{ .name = "zutils" },
     };
 
     const exe = b.addExecutable(.{
@@ -40,8 +40,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     appendDependencies(b, unit_test, target, optimize, deps ++ test_deps);
+
+    const run_unit_tests = b.addRunArtifact(unit_test);
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&unit_test.step);
+    test_step.dependOn(&run_unit_tests.step);
 }
 
 fn appendDependencies(b: *std.Build, comp: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, deps: []const Dependency) void {

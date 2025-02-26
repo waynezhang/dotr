@@ -1,5 +1,5 @@
 comptime {
-
+    _ = @import("dotfile/dotfile.zig");
 }
 
 test {

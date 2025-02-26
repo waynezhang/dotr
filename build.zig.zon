@@ -1,10 +1,18 @@
 .{
-    .name = "dz",
+    .name = "dotr",
     .version = "0.0.0",
     .dependencies = .{
-        .@"zig-cli" = .{
-            .url = "git+https://github.com/sam701/zig-cli?ref=last-zig-0.13#9a94c4803a52e54c26b198096d63fb5bde752da2",
-            .hash = "1220ab73fb7cc11b2308edc3364988e05efcddbcac31b707f55e6216d1b9c0da13f1",
+        .protest = .{
+            .url = "git+https://github.com/ibokuri/protest#e7a9bc39c213985814a904b38e4506a6fbd537b2",
+            .hash = "122014736a658ee30f82e5c6e3038c95727690fe01fced2791b213dba10c65fba7c5",
+        },
+        .zutils = .{
+            .url = "git+https://github.com/waynezhang/zutils#a7f79a1bd4c8f8b6268a3c55e94b81d3d6f9b280",
+            .hash = "12202268bab1253370e31bc046502ce66142233c58df308af0d9fd88740e078cb340",
+        },
+        .age = .{
+            .url = "git+https://github.com/waynezhang/zage#f8f209c83fdcebcacc823101e09859878bfcb395",
+            .hash = "1220e0ef42436661c0bc274f63c939755e99ed4b279ecabce4604d32f49d80b4b7a4",
         },
     },
     .paths = .{
