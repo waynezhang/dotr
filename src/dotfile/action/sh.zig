@@ -1,7 +1,14 @@
 const std = @import("std");
 const log = @import("zutils").log;
 
-pub fn do(_: @This(), alloc: std.mem.Allocator, _: bool, cwd: []const u8, parameters: []const []const u8) !void {
+pub fn do(
+    _: @This(),
+    alloc: std.mem.Allocator,
+    _: []const []const u8,
+    parameters: []const []const u8,
+    cwd: []const u8,
+    _: bool,
+) anyerror!void {
     const argv = [_][]const u8{
         "sh",
         "-c",

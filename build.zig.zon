@@ -11,8 +11,8 @@
             .hash = "12202268bab1253370e31bc046502ce66142233c58df308af0d9fd88740e078cb340",
         },
         .age = .{
-            .url = "git+https://github.com/waynezhang/zage#f8f209c83fdcebcacc823101e09859878bfcb395",
-            .hash = "1220e0ef42436661c0bc274f63c939755e99ed4b279ecabce4604d32f49d80b4b7a4",
+            .url = "git+https://github.com/KhoaNguyen55/zage#df7093e0838d2d80e11fd1daae538cf16896ab3a",
+            .hash = "122077863653adbf55d01944a07f9e21c2e055120cb1845594862849fd992ff8df5e",
         },
     },
     .paths = .{

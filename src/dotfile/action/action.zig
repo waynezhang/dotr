@@ -12,10 +12,17 @@ pub const Action = union(enum) {
     sh: sh,
     include: include,
 
-    pub fn do(self: Action, alloc: std.mem.Allocator, is_reverse: bool, cwd: []const u8, parameters: []const []const u8) anyerror!void {
+    pub fn do(
+        self: Action,
+        alloc: std.mem.Allocator,
+        options: []const []const u8,
+        parameters: []const []const u8,
+        cwd: []const u8,
+        is_reverse: bool,
+    ) anyerror!void {
         switch (self) {
             inline else => |case| {
-                try case.do(alloc, is_reverse, cwd, parameters);
+                try case.do(alloc, options, parameters, cwd, is_reverse);
             },
         }
     }

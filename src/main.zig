@@ -45,5 +45,5 @@ pub fn main() !void {
 
 fn runFile(alloc: std.mem.Allocator, filename: []const u8, reverse: bool) !void {
     const incl: action.Action = .{ .include = .{} };
-    try incl.do(alloc, reverse, ".", &[_][]const u8{filename});
+    try incl.do(alloc, &.{}, &[_][]const u8{filename}, ".", reverse);
 }

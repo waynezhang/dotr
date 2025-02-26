@@ -2,7 +2,16 @@ const std = @import("std");
 const zutils = @import("zutils");
 const log = zutils.log;
 
-pub fn do(_: @This(), alloc: std.mem.Allocator, is_reverse: bool, cwd: []const u8, parameters: []const []const u8) !void {
+const require = @import("protest").require;
+
+pub fn do(
+    _: @This(),
+    alloc: std.mem.Allocator,
+    _: []const []const u8,
+    parameters: []const []const u8,
+    cwd: []const u8,
+    is_reverse: bool,
+) anyerror!void {
     const src = try zutils.fs.toAbsolutePathAlloc(alloc, parameters[0], cwd);
     defer alloc.free(src);
     const src_desp = try zutils.fs.contractTildeAlloc(alloc, src);
@@ -58,4 +67,30 @@ fn unlink(dst: []const u8) !void {
     }
 
     try std.fs.deleteFileAbsolute(dst);
+}
+
+test "link" {
+    const alloc = std.testing.allocator;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try tmp.dir.realpathAlloc(alloc, ".");
+    defer alloc.free(path);
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "src_file",
+        .data = "some dummy data",
+        .flags = .{},
+    });
+
+    const act = @This(){};
+    try act.do(alloc, &.{}, &.{ "src_file", "dst_file" }, path, false);
+
+    const dst_path = try std.fs.path.join(alloc, &.{ path, "dst_file" });
+    defer alloc.free(dst_path);
+
+    try require.isTrue(try zutils.fs.isSymLink(dst_path));
+
+    try act.do(alloc, &.{}, &.{ "src_file", "dst_file" }, path, true);
+    try require.isFalse(zutils.fs.isExisting(dst_path));
 }

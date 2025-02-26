@@ -5,12 +5,15 @@ const log = zutils.log;
 
 pub const Command = struct {
     action: action.Action,
+    options: []const []const u8,
     parameters: []const []const u8,
     line_no: i16,
 
     pub fn deinit(self: Command, alloc: std.mem.Allocator) void {
         for (self.parameters) |p| alloc.free(p);
         alloc.free(self.parameters);
+        for (self.options) |o| alloc.free(o);
+        alloc.free(self.options);
     }
 };
 
@@ -66,22 +69,29 @@ fn parseLine(alloc: std.mem.Allocator, line: []const u8, line_no: i16) !?Command
         return null;
     }
 
-    const act_end = std.mem.indexOf(u8, line, " ") orelse trimmed.len;
-    const lowercased = try std.ascii.allocLowerString(alloc, trimmed[0..act_end]);
-    defer alloc.free(lowercased);
+    var opt_start: usize = 0;
+    var opt_end: usize = 0;
+    var act_end = std.mem.indexOf(u8, line, " ") orelse return error.InvalidAction;
+    if (std.mem.indexOf(u8, line[0..act_end], "(")) |open| {
+        const close = std.mem.indexOf(u8, line[open..act_end], ")") orelse return error.InvalidAction;
+        opt_start = open + 1;
+        opt_end = open + close;
 
-    const act = action.fromString(lowercased) orelse {
+        act_end = open;
+    }
+    const lower_act = try std.ascii.allocLowerString(alloc, std.mem.trim(u8, line[0..act_end], " "));
+    defer alloc.free(lower_act);
+
+    const act = action.fromString(lower_act) orelse {
         return error.InvalidAction;
     };
 
     var arr = std.ArrayList([]u8).init(alloc);
     defer arr.deinit();
-    errdefer {
-        for (arr.items) |i| alloc.free(i);
-    }
+    errdefer for (arr.items) |i| alloc.free(i);
 
-    if (act_end < trimmed.len) {
-        var it = std.mem.splitScalar(u8, trimmed[act_end..], ':');
+    if (opt_start > 0) {
+        var it = std.mem.splitScalar(u8, line[opt_start..opt_end], ',');
         while (it.next()) |p| {
             const trimmed_p = std.mem.trim(u8, p, " ");
             if (trimmed_p.len == 0) {
@@ -89,16 +99,29 @@ fn parseLine(alloc: std.mem.Allocator, line: []const u8, line_no: i16) !?Command
             }
             try arr.append(try alloc.dupe(u8, trimmed_p));
         }
+    }
 
-        if (arr.items.len != act.requiredParams()) {
-            return error.InvalidParameters;
+    const options = try arr.toOwnedSlice();
+    errdefer for (options) |opt| alloc.free(opt);
+
+    const param_start = @max(act_end, opt_end) + 1;
+    var it = std.mem.splitScalar(u8, line[param_start..], ':');
+    while (it.next()) |p| {
+        const trimmed_p = std.mem.trim(u8, p, " ");
+        if (trimmed_p.len == 0) {
+            continue;
         }
+        try arr.append(try alloc.dupe(u8, trimmed_p));
+    }
+
+    if (arr.items.len != act.requiredParams()) {
+        return error.InvalidParameters;
     }
 
     const parameters = try arr.toOwnedSlice();
-
     return .{
         .action = act,
+        .options = options,
         .parameters = parameters,
         .line_no = line_no,
     };
@@ -106,65 +129,139 @@ fn parseLine(alloc: std.mem.Allocator, line: []const u8, line_no: i16) !?Command
 
 const require = @import("protest").require;
 
-test "parseLIne" {
-    const alloc = std.testing.allocator;
+test "parseLine empty" {
+    const act = try parseLine(std.testing.allocator, "", 1);
+    try require.isNull(act);
+}
 
-    {
-        const act = try parseLine(alloc, "", 1);
-        try require.isNull(act);
-    }
-    {
-        const act = try parseLine(alloc, "", 1);
-        try require.isNull(act);
-    }
-    {
-        const act = try parseLine(alloc, " # some comment", 1);
-        try require.isNull(act);
-    }
-    {
-        const act = try parseLine(alloc, "LINK file1 : file2", 88) orelse unreachable;
-        defer act.deinit(alloc);
+test "parseLine # some comment" {
+    const act = try parseLine(std.testing.allocator, " # some comment", 1);
+    try require.isNull(act);
+}
 
-        try require.equal(act.line_no, @as(i16, 88));
-        try require.equal(act.action.toString(), "link");
-        try require.equal(act.parameters[0], "file1");
-        try require.equal(act.parameters[1], "file2");
-    }
-    {
-        const act = try parseLine(alloc, "link     file1 : file2", 88) orelse unreachable;
-        defer act.deinit(alloc);
+test "parseLine LINK file1 : file2" {
+    const act = try parseLine(std.testing.allocator, "LINK file1 : file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
 
-        try require.equal(act.line_no, @as(i16, 88));
-        try require.equal(act.action.toString(), "link");
-        try require.equal(act.parameters[0], "file1");
-        try require.equal(act.parameters[1], "file2");
+    try require.equal(@as(i16, 88), act.line_no);
+    try require.equal("link", act.action.toString());
+    try require.equal(@as(usize, 0), act.options.len);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link     file1 : file2" {
+    const act = try parseLine(std.testing.allocator, "link     file1 : file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
+
+    try require.equal(@as(i16, 88), act.line_no);
+    try require.equal(act.action.toString(), "link");
+    try require.equal(@as(usize, 0), act.options.len);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link file1" {
+    if (parseLine(std.testing.allocator, "link file1", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidParameters, err);
     }
-    {
-        if (parseLine(alloc, "link file1", 88)) |_| {
-            try require.fail("unreachable");
-        } else |err| {
-            try require.equalError(error.InvalidParameters, err);
-        }
+}
+
+test "parseLine link file1:" {
+    if (parseLine(std.testing.allocator, "link file1:", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidParameters, err);
     }
-    {
-        if (parseLine(alloc, "link file1:", 88)) |_| {
-            try require.fail("unreachable");
-        } else |err| {
-            try require.equalError(error.InvalidParameters, err);
-        }
+}
+
+test "parseLine link :file1" {
+    if (parseLine(std.testing.allocator, "link :file1", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidParameters, err);
     }
-    {
-        if (parseLine(alloc, "link :file1", 88)) |_| {
-            try require.fail("unreachable");
-        } else |err| {
-            try require.equalError(error.InvalidParameters, err);
-        }
+}
+
+test "parseLine link :file1:" {
+    if (parseLine(std.testing.allocator, "link :file1:", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidParameters, err);
     }
-    {
-        if (parseLine(alloc, "link :file1:", 88)) |_| {
-            try require.fail("unreachable");
-        } else |err| {
-            try require.equalError(error.InvalidParameters, err);
-        }
+}
+
+test "parseLine link(options) file1:file2" {
+    const act = try parseLine(std.testing.allocator, "link(options) file1:file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
+
+    try require.equal("link", act.action.toString());
+    try require.equal("options", act.options[0]);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link ( options ) file1:file2" {
+    const act = try parseLine(std.testing.allocator, "link(options) file1:file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
+
+    try require.equal("link", act.action.toString());
+    try require.equal("options", act.options[0]);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link (opt1,opt2) file1:file2" {
+    const act = try parseLine(std.testing.allocator, "link(opt1,opt2) file1:file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
+
+    try require.equal("link", act.action.toString());
+    try require.equal(@as(usize, 2), act.options.len);
+    try require.equal("opt1", act.options[0]);
+    try require.equal("opt2", act.options[1]);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link() file1:file2" {
+    const act = try parseLine(std.testing.allocator, "link() file1:file2", 88) orelse unreachable;
+    defer act.deinit(std.testing.allocator);
+
+    try require.equal("link", act.action.toString());
+    try require.equal(@as(usize, 0), act.options.len);
+    try require.equal("file1", act.parameters[0]);
+    try require.equal("file2", act.parameters[1]);
+}
+
+test "parseLine link ( opt1, ) file1:file2" {
+    if (parseLine(std.testing.allocator, "link( opt1, ) file1:file2", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidAction, err);
+    }
+}
+
+test "parseLine link()file1:file2" {
+    if (parseLine(std.testing.allocator, "link()file1:file2", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidAction, err);
+    }
+}
+
+test "parseLine link( file1:file2" {
+    if (parseLine(std.testing.allocator, "link( file1:file2", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidAction, err);
+    }
+}
+test "parseLine link) file1:file2" {
+    if (parseLine(std.testing.allocator, "link) file1:file2", 88)) |_| {
+        try require.fail("unreachable");
+    } else |err| {
+        try require.equalError(error.InvalidAction, err);
     }
 }

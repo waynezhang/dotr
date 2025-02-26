@@ -2,11 +2,21 @@ const std = @import("std");
 const zutils = @import("zutils");
 const age = @import("age");
 const log = zutils.log;
+const decrypt_action = @import("decrypt.zig");
+
+const require = @import("protest").require;
 
 var _passphrase_storage = [_]u8{0} ** 256;
 var _passphrase: ?[]const u8 = null;
 
-pub fn do(_: @This(), alloc: std.mem.Allocator, is_reverse: bool, cwd: []const u8, parameters: []const []const u8) !void {
+pub fn do(
+    _: @This(),
+    alloc: std.mem.Allocator,
+    _: []const []const u8,
+    parameters: []const []const u8,
+    cwd: []const u8,
+    is_reverse: bool,
+) anyerror!void {
     const src = try zutils.fs.toAbsolutePathAlloc(alloc, parameters[0], cwd);
     defer alloc.free(src);
     const src_desp = try zutils.fs.contractTildeAlloc(alloc, src);
@@ -63,16 +73,20 @@ fn encrypt(alloc: std.mem.Allocator, src: []const u8, dst: []const u8) !void {
 
     const encrypted_file = try std.fs.cwd().createFile(dst, .{});
     defer encrypted_file.close();
+    var encrypt_buf_writer = std.io.bufferedWriter(encrypted_file.writer());
+
+    var encryptor = age.AgeEncryptor.encryptInit(alloc);
+
     const recipient = try age.scrypt.ScryptRecipient.create(alloc, passphrase, null);
-    const any_recipient = recipient.any();
-    defer any_recipient.destroy();
+    defer recipient.destroy();
 
-    var encryptor = try age.AgeEncryptor.encryptInit(alloc, &.{any_recipient}, encrypted_file.writer().any());
+    try encryptor.addRecipient(recipient);
+    try encryptor.finalizeRecipients(encrypt_buf_writer.writer().any());
 
-    var plain_reader = std.io.bufferedReader(plain_file.reader());
+    var plain_file_reader = std.io.bufferedReader(plain_file.reader());
     var buffer: [8192]u8 = undefined;
     while (true) {
-        const len = try plain_reader.read(&buffer);
+        const len = try plain_file_reader.read(&buffer);
         if (len == 0) {
             break;
         }
@@ -80,6 +94,7 @@ fn encrypt(alloc: std.mem.Allocator, src: []const u8, dst: []const u8) !void {
     }
 
     try encryptor.finish();
+    try encrypt_buf_writer.flush();
 }
 
 fn decrypt(alloc: std.mem.Allocator, plain: []const u8, enc: []const u8) !void {
@@ -108,17 +123,24 @@ fn decrypt(alloc: std.mem.Allocator, plain: []const u8, enc: []const u8) !void {
     const encrypted_file = try std.fs.cwd().openFile(enc, .{});
     defer encrypted_file.close();
 
-    const identity = try age.scrypt.ScryptIdentity.create(alloc, passphrase);
-    defer identity.any().destroy();
+    var encrypted_buf_reader = std.io.bufferedReader(encrypted_file.reader());
 
-    try age.AgeDecryptor.decryptFromReaderToWriter(
-        alloc,
-        &.{identity.any()},
-        tmp_file.writer().any(),
-        encrypted_file.reader().any(),
-    );
+    var decryptor = try age.AgeDecryptor.decryptInit(alloc, encrypted_buf_reader.reader().any());
+
+    const identity = try age.scrypt.ScryptIdentity.create(alloc, passphrase);
+    defer identity.destroy();
+
+    try decryptor.addIdentity(identity);
+    try decryptor.finalizeIdentities();
+
+    var tmp_file_writer = std.io.bufferedWriter(tmp_file.writer());
+    while (try decryptor.next()) |data| {
+        _ = try tmp_file_writer.write(data);
+    }
+    try tmp_file_writer.flush();
 
     tmp_file.close();
+
     try std.fs.renameAbsolute(tmp_filepath, plain);
 }
 
@@ -147,4 +169,62 @@ fn setTTYEcho(enable: bool) void {
     };
     termios.lflag.ECHO = enable;
     std.posix.tcsetattr(std.posix.STDIN_FILENO, .NOW, termios) catch {};
+}
+
+test "encrypt action: encrypt / decrypt" {
+    const alloc = std.testing.allocator;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try tmp.dir.realpathAlloc(alloc, ".");
+    defer alloc.free(path);
+
+    const data = "some dummy data";
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "src_file",
+        .data = data,
+        .flags = .{},
+    });
+
+    _passphrase = "password";
+
+    const act = @This(){};
+    try act.do(alloc, &.{}, &.{ "src_file", "dst_file" }, path, false);
+
+    try act.do(alloc, &.{}, &.{ "decrypted_file", "dst_file" }, path, true);
+
+    const decrypted_data = try tmp.dir.readFileAlloc(alloc, "decrypted_file", 1024);
+    defer alloc.free(decrypted_data);
+
+    try require.equal(data, decrypted_data);
+}
+
+test "decrypt action: encrypt / decrypt" {
+    const alloc = std.testing.allocator;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try tmp.dir.realpathAlloc(alloc, ".");
+    defer alloc.free(path);
+
+    const data = "some dummy data";
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "dst_file",
+        .data = data,
+        .flags = .{},
+    });
+
+    _passphrase = "password";
+
+    const act = decrypt_action{};
+    try act.do(alloc, &.{}, &.{ "src_file", "dst_file" }, path, true);
+
+    try act.do(alloc, &.{}, &.{ "src_file", "decrypted_file" }, path, false);
+
+    const decrypted_data = try tmp.dir.readFileAlloc(alloc, "decrypted_file", 1024);
+    defer alloc.free(decrypted_data);
+
+    try require.equal(data, decrypted_data);
 }

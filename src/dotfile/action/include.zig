@@ -3,7 +3,14 @@ const zutils = @import("zutils");
 const log = zutils.log;
 const dotfile = @import("../dotfile.zig");
 
-pub fn do(_: @This(), alloc: std.mem.Allocator, is_reverse: bool, cwd: []const u8, parameters: []const []const u8) !void {
+pub fn do(
+    _: @This(),
+    alloc: std.mem.Allocator,
+    _: []const []const u8,
+    parameters: []const []const u8,
+    cwd: []const u8,
+    is_reverse: bool,
+) anyerror!void {
     const path = try zutils.fs.toAbsolutePathAlloc(alloc, parameters[0], cwd);
     defer alloc.free(path);
 
@@ -27,7 +34,7 @@ pub fn do(_: @This(), alloc: std.mem.Allocator, is_reverse: bool, cwd: []const u
             act.parameters,
         });
 
-        act.action.do(alloc, is_reverse, file_cwd, act.parameters) catch |err| {
+        act.action.do(alloc, act.options, act.parameters, file_cwd, is_reverse) catch |err| {
             log.err("Failed to run {s}:{d} due to {s}.", .{ desp, act.line_no, @errorName(err) });
         };
     }
