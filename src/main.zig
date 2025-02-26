@@ -1,8 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const pargs = @import("parg");
 const zutils = @import("zutils");
 const log = zutils.log;
-const args = @import("args.zig");
 const version = @import("version.zig");
 const include = @import("dotfile/action/include.zig");
 const action = @import("dotfile/action/action.zig");
@@ -15,30 +15,57 @@ pub fn main() !void {
     }
     const alloc = gpa.allocator();
 
-    var reverse = false;
-    var filename: ?[]const u8 = null;
-    defer {
-        if (filename) |f| {
-            alloc.free(f);
-        }
-    }
-
     log.init();
 
-    for (std.os.argv[1..]) |arg| {
-        const s = try args.parse(alloc, arg);
-        defer alloc.free(s);
+    var reverse = false;
+    var verbose = false;
+    var filename: ?[]const u8 = null;
 
-        if (std.mem.eql(u8, s, "-v")) {
-            log.setLevel(.debug);
-        } else if (std.mem.eql(u8, s, "-r")) {
-            reverse = true;
-        } else if (filename == null) {
-            filename = try alloc.dupe(u8, s);
-        } else {
-            log.err("Invalid argument {s}", .{s});
+    const help = "dotr " ++ version.Version ++
+        \\
+        \\
+        \\USAGE:
+        \\  dotr [OPTIONS] [FILENAME]
+        \\
+        \\OPTIONS
+        \\  --reverse|-r    Reverse the commands (Link → Unlink, Encrypt → Decrypt).
+        \\  --verbose|-v    Verbose mode.
+    ;
+
+    const cb = struct {
+        fn showHelp() void {
+            log.info("{s}", .{help});
+            std.process.exit(0);
+        }
+    };
+
+    var p = try pargs.parseProcess(alloc, .{});
+    defer p.deinit();
+    _ = p.nextValue(); // skip executable name
+
+    while (p.next()) |token| {
+        switch (token) {
+            .flag => |flag| {
+                if (flag.isLong("verbose") or flag.isShort("v")) {
+                    verbose = true;
+                } else if (flag.isLong("reverse") or flag.isShort("r")) {
+                    reverse = true;
+                } else if (flag.isLong("help") or flag.isShort("h")) {
+                    cb.showHelp();
+                }
+            },
+            .arg => |val| {
+                if (filename != null) {
+                    log.err("Only one file is supported", .{});
+                    std.process.exit(0);
+                }
+                filename = val;
+            },
+            .unexpected_value => @panic("Invalid argumnts"),
         }
     }
+
+    if (verbose) log.setLevel(.debug);
 
     try runFile(alloc, filename orelse "dotfile", reverse);
 }

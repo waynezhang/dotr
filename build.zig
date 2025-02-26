@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
 
     const deps = &[_]Dependency{
         .{ .name = "age" },
+        .{ .name = "parg" },
         .{ .name = "zutils" },
     };
 

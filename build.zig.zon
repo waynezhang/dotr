@@ -14,6 +14,10 @@
             .url = "git+https://github.com/KhoaNguyen55/zage#df7093e0838d2d80e11fd1daae538cf16896ab3a",
             .hash = "122077863653adbf55d01944a07f9e21c2e055120cb1845594862849fd992ff8df5e",
         },
+        .parg = .{
+            .url = "git+https://github.com/judofyr/parg#229fa709c1fc2e94490a736e17151cb85a328a81",
+            .hash = "1220b3da27690b99a15babef2e56d74d4683eb06ad0c2ac35ef883767177556bb344",
+        },
     },
     .paths = .{
         "build.zig",
