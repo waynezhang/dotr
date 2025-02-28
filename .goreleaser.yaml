@@ -6,7 +6,6 @@ builds:
       - -Doptimize=ReleaseFast
     targets:
       - x86_64-linux
-      - x86_64-windows
       - aarch64-linux
       - x86_64-macos
       - aarch64-macos
@@ -19,9 +18,6 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        formats: ["zip"]
 
 brews:
   - repository:
