@@ -7,8 +7,8 @@
             .hash = "122014736a658ee30f82e5c6e3038c95727690fe01fced2791b213dba10c65fba7c5",
         },
         .zutils = .{
-            .url = "git+https://github.com/waynezhang/zutils#5b13505d8fc659894b305fc7f25f057281ab48ab",
-            .hash = "1220cdb3ff0c9f216696f1dd6d6e9917dd1f3d692b357094ea5fe7db01baf8351bb6",
+            .url = "git+https://github.com/waynezhang/zutils#148a062109057ab12402dd03749d64d2499fa965",
+            .hash = "12201861d0a69a5d5c6fe041216b56e0710388de5a8071c63c0245693b6fdc0532be",
         },
         .age = .{
             .url = "git+https://github.com/KhoaNguyen55/zage#df7093e0838d2d80e11fd1daae538cf16896ab3a",
