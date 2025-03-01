@@ -57,16 +57,9 @@ fn link(src: []const u8, dst: []const u8) !void {
 }
 
 fn unlink(dst: []const u8) !void {
-    if (!zutils.fs.isExisting(dst)) {
-        return error.FileNotFound;
-    }
-
-    const is_link = try zutils.fs.isSymLink(dst);
-    if (!is_link) {
-        return error.FileIsNotLink;
-    }
-
-    try std.fs.deleteFileAbsolute(dst);
+    std.fs.deleteFileAbsolute(dst) catch |err| {
+        log.err("Failed to unlink {s}", .{@errorName(err)});
+    };
 }
 
 test "link" {
