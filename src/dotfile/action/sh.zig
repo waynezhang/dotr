@@ -1,5 +1,6 @@
 const std = @import("std");
-const log = @import("zutils").log;
+const zutils = @import("zutils");
+const log = zutils.log;
 
 pub fn do(
     _: @This(),
@@ -14,11 +15,13 @@ pub fn do(
         "-c",
         parameters[0],
     };
+    const abs_cwd = try zutils.fs.toAbsolutePathAlloc(alloc, cwd, null);
+    defer alloc.free(abs_cwd);
 
-    log.info("Running shell command {s} {s}", .{ "sh -c", parameters[0] });
+    log.info("Running shell command {s} {s} in {s}", .{ "sh -c", parameters[0], cwd });
 
     var child = std.process.Child.init(&argv, alloc);
-    child.cwd = cwd;
+    child.cwd = abs_cwd;
 
     runCommand(&child) catch |err| {
         log.err("Failed to run shell command due to {s}", .{@errorName(err)});
