@@ -1,3 +1,11 @@
+## v0.0.3 (2025-03-01)
+
+### Fix
+
+- FileNotFound error if DOTR_PATH is not absolute path ([3e0b0d3](https://github.com/waynezhang/dotr/commit/3e0b0d3903fe336cd7a706bf3fb188444e06cf9b))
+- don't check links when unlinking ([18fc767](https://github.com/waynezhang/dotr/commit/18fc767596c3f843b68a0ccae9de28446ea634d4))
+
+
 ## v0.0.2 (2025-03-01)
 
 ### New feature
