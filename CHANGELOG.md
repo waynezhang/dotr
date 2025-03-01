@@ -1,3 +1,10 @@
+## v0.0.2 (2025-03-01)
+
+### New feature
+
+- support run external command ([ca33701](https://github.com/waynezhang/dotr/commit/ca3370131acc64ca406145d7cdc97668d22cc11e))
+
+
 ## v0.0.1 (2025-02-28)
 
 ### New feature
