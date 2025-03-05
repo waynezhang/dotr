@@ -1,18 +1,19 @@
 .{
-    .name = "dotr",
+    .name = .dotr,
     .version = "0.0.0",
+    .fingerprint = 0x23d39fb7d6335c80,
     .dependencies = .{
         .protest = .{
-            .url = "git+https://github.com/ibokuri/protest#e7a9bc39c213985814a904b38e4506a6fbd537b2",
-            .hash = "122014736a658ee30f82e5c6e3038c95727690fe01fced2791b213dba10c65fba7c5",
+            .url = "git+https://github.com/waynezhang/protest#b194504ba4b130f3f636c59b5cb53f39256b231a",
+            .hash = "protest-0.1.0-PvViiK27AAAf7RwKNwRPsrHtjsTUkk-QxX2UD9Sj7njB",
         },
         .zutils = .{
             .url = "git+https://github.com/waynezhang/zutils#148a062109057ab12402dd03749d64d2499fa965",
             .hash = "12201861d0a69a5d5c6fe041216b56e0710388de5a8071c63c0245693b6fdc0532be",
         },
         .age = .{
-            .url = "git+https://github.com/KhoaNguyen55/zage#df7093e0838d2d80e11fd1daae538cf16896ab3a",
-            .hash = "122077863653adbf55d01944a07f9e21c2e055120cb1845594862849fd992ff8df5e",
+            .url = "git+https://github.com/KhoaNguyen55/zage#c3097cfb92b6e6b38119cf619d30362b3c187833",
+            .hash = "age-0.5.0-DDCZuBsaAQCfdvx34M6IIsCJbLyfI0acu9yQWC6ICuO3",
         },
         .parg = .{
             .url = "git+https://github.com/judofyr/parg#229fa709c1fc2e94490a736e17151cb85a328a81",
