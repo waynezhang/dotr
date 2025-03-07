@@ -1,3 +1,10 @@
+## v0.0.4 (2025-03-07)
+
+### Refactor
+
+- use smp_allocator in release mode ([d9b0935](https://github.com/waynezhang/dotr/commit/d9b09352b9d6085d4fcbc83186ef20265997773d))
+
+
 ## v0.0.3 (2025-03-01)
 
 ### Fix
