@@ -8,12 +8,15 @@ const include = @import("dotfile/action/include.zig");
 const action = @import("dotfile/action/action.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        const check = gpa.deinit();
-        if (check == .leak) unreachable;
-    }
-    const alloc = gpa.allocator();
+    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+
+    const alloc, const is_debug = switch (builtin.mode) {
+        .Debug, .ReleaseSafe => .{ debug_allocator.allocator(), true },
+        .ReleaseFast, .ReleaseSmall => .{ std.heap.smp_allocator, false },
+    };
+    defer if (is_debug) {
+        _ = debug_allocator.deinit();
+    };
 
     log.init();
 
