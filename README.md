@@ -18,7 +18,9 @@ A simple dotfile manager for personal use.
 $ dotr -h
 usage: dotr [flags] [shell command]
 
-[shell command]        Run shell commands in the dotfile directory
+<command>              
+  run                  Run the default dotfile or the file indicated by -f flag
+  shell-command        A convenient way to run shell commands in the directory where dotfile exists
 
 flags:
   -f, --file           Specify config file (default: 'dotfile')

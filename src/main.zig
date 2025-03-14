@@ -23,15 +23,17 @@ pub fn main() !void {
     var reverse = false;
     var verbose = false;
     var filename: ?[]const u8 = null;
-    var external_command = std.ArrayList(u8).init(alloc);
-    defer external_command.deinit();
+    var command: std.ArrayList([]const u8) = .init(alloc);
+    defer command.deinit();
 
     const cb = struct {
         fn showHelp() void {
             const help =
-                \\usage: dotr [flags] [shell command]
+                \\usage: dotr [flags] <command>
                 \\
-                \\[shell command]        A convenient way to run shell commands in the directory where dotfile exists
+                \\<command>              
+                \\  run                  Run the default dotfile or the file indicated by -f flag
+                \\  shell-command        A convenient way to run shell commands in the directory where dotfile exists
                 \\
                 \\flags:
                 \\  -f, --file           `dotfile` will be used by default(use environment variable `DOTR_FILE` to override)
@@ -72,11 +74,9 @@ pub fn main() !void {
                 }
             },
             .arg => |val| {
-                // the following tokens are for external command
-                try external_command.appendSlice(val);
+                try command.append(val);
                 while (p.nextValue()) |v| {
-                    try external_command.append(' ');
-                    try external_command.appendSlice(v);
+                    try command.append(v);
                 }
             },
             .unexpected_value => @panic("Invalid argumnts"),
@@ -85,21 +85,28 @@ pub fn main() !void {
 
     if (verbose) log.setLevel(.debug);
 
-    try run(alloc, filename, reverse, external_command.items);
-}
-
-fn run(alloc: std.mem.Allocator, filename: ?[]const u8, reverse: bool, external_command: []const u8) !void {
-    const fallbacked = try fallbackFile(alloc, filename);
-    defer alloc.free(fallbacked);
-
-    if (external_command.len > 0) {
-        const sh: action.Action = .{ .sh = .{} };
-        try sh.do(alloc, &.{}, &.{external_command}, std.fs.path.dirname(fallbacked) orelse ".", reverse);
+    if (command.items.len == 0) {
+        cb.showHelp();
         return;
     }
 
-    const incl: action.Action = .{ .include = .{} };
-    try incl.do(alloc, &.{}, &[_][]const u8{fallbacked}, ".", reverse);
+    try run(alloc, filename, reverse, command.items);
+}
+
+fn run(alloc: std.mem.Allocator, filename: ?[]const u8, reverse: bool, command: []const []const u8) !void {
+    const fallbacked = try fallbackFile(alloc, filename);
+    defer alloc.free(fallbacked);
+
+    if (std.mem.eql(u8, command[0], "run")) {
+        const incl: action.Action = .{ .include = .{} };
+        try incl.do(alloc, &.{}, &[_][]const u8{fallbacked}, ".", reverse);
+    } else {
+        const joined = try std.mem.join(alloc, " ", command);
+        defer alloc.free(joined);
+
+        const sh: action.Action = .{ .sh = .{} };
+        try sh.do(alloc, &.{}, &.{joined}, std.fs.path.dirname(fallbacked) orelse ".", reverse);
+    }
 }
 
 fn fallbackFile(alloc: std.mem.Allocator, filename: ?[]const u8) ![]const u8 {
