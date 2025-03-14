@@ -1,3 +1,10 @@
+## v0.0.5 (2025-03-14)
+
+### Refactor
+
+- deprecate implict running, add `run` command ([4b126d4](https://github.com/waynezhang/dotr/commit/4b126d4738ba4350ba53b4de995b37e4ccb81009))
+
+
 ## v0.0.4 (2025-03-07)
 
 ### Refactor
